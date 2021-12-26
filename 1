@@ -1,0 +1,84 @@
+	~всякая полезная дичь
+lsblk
+cp [src] [dst] - копирование
+groups - проверка групп пользователя 
+systemctl status ssh - проверка ssh
+useradd/userdel (-r //удаление с домашней дерективой) <name>
+
+	~folders
+/etc/
+	hosts
+	hostname
+	ssh
+		ssh_config
+	pam.d
+	~устанавливаем дом пакеты 
+apt install sudo
+apt install vim (becouse? i like this) 
+apt install libpam-pwquality
+apt install ufw
+apt install openssh-server
+
+	~ROOT права 
+usermod -aG root minell
+vim /etc/sudoers
+Defaults	secure_path="...:/snap/bin"
+//Defaults	
+Defaults	badpassword_message="Tvoi password huita"
+Defaults	passwd_tries=3
+minell	ALL=(ALL:ALL) ALL
+reboot
+
+	~firewall
+ufw enable/disable
+ufw status
+ufw default deny incoming
+ufw default allow outgoing
+ufw allow 4242
+
+	~создание группы 
+addgroup/groupdel user42
+usermod -aG user42 minell
+
+	~Политика поролей
+vim /etc/login.defs
+PASS_MAX_DAYS 30
+PASS_MIN_DAYS 2
+PASS_WARN_AGE 7
+vim /etc/pam.d/common-password
+password        requisite	pam_pwquality.so retry=3 maxrepeat=3 minlen=10 dcredit=-1 ucredit=-1 reject_username difok=7
+password        requisite	pam_pwquality.so retry=3 maxrepeat=3 minlen=10 dcredit=-1 ucredit=-1 reject_username enforce_for_root
+passwd <user>
+sudo passwd -S minell 
+sudo passwd -d test // удаление пароля 
+sudo chage -l <minell> // вывод подробной информации о правилах пароля
+//альтернативный способ изменения индивидуальных правил пароля 
+sudo chage -m 2  minell / sudo passwd -n 2  minell // min_days = 2
+	   -M 30 minell /	      -x 40 minell // max_days = 30
+	   -W 7  minell / 	      -w 7  minell // warn_age = 7
+
+	~Script
+{
+	echo "Architecture :" "$(uname -a)"
+	echo "CPU physical :" "$(grep 'physical id' /proc/cpuinfo | uniq | wc -l)"
+	echo "vCPU         :" "$(grep 'processor' /proc/cpuinfo | uniq | wc -l)"
+		USED_R=$(free -m |awk 'NR == 2 {print $3}')
+		TOTAL_R=$(free -m |awk 'NR == 2 {print $2}')
+		PRCT_R=$(free -m |awk 'NR == 2 {printf "%.2f", $3*100/$2}')
+	echo "Memory Usage :" "${USED_R}/${TOTAL_R}MB" "(${PRCT_R}%)"
+		USED_D=$(df -m --total | awk 'END{print $3}')
+		TOTAL_D=$(df -h --total | awk 'END{print $2}')
+		PRCT_D=$(df -h --total | awk 'END{print $5}')
+	echo "Disk Usage   :" "${USED_D}/${TOTAL_D}" "(${PRCT_D})"
+	echo "CPU Load     :" "$(mpstat | awk '/all/ {printf "%.2f", 100 - $NF}')%"
+	echo "Last Boot    :" "$(who -b | awk '{print $3,$4}')"
+	echo "LVM in Use   :" $(if [ $(/usr/sbin/blkid | grep -c '/dev/mapper') -eq 0 ]; then echo "no"; else echo "yes"; fi)
+	echo "Connect TCP  :" "$(ss -s | awk '/TCP:/ {print $2}')"
+	echo "Users Logged :" "$(who | wc -l)"
+	echo "Network      :" "IP $(hostname -I)" "($(/usr/sbin/ifconfig | awk '/ether/ {print $2}'))"
+	echo "Sudo         :" "$(grep -c 'COMMAND' /var/log/sudo/sudo.log)" "cmd"
+} > temp.tmp
+
+wall -n temp.tmp
+
+rm -rf temp.tmp
